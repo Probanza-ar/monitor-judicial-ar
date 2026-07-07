@@ -1,0 +1,7 @@
+{
+  "_nota": "Feria e inhabiles judiciales del Poder Judicial de la CABA (fuero CAyT). NO es la feria de la CSJN. Art. 122 CCAyT [VERIFICAR VIGENCIA]: los plazos procesales se computan en dias habiles judiciales -> feria e inhabiles se descuentan del plazo (por eso descontarEnCaducidad = true). Cargar los rangos oficiales de feria (Acordadas/Resoluciones del TSJ / Consejo de la Magistratura CABA).",
+  "_nota_inhabiles": "inhabilesExcepcionales: asuetos / dias inhabiles decretados AD-HOC por el TSJ durante el anio y que no estan en la feria anual (mudanza de juzgado, caida general del EJE, duelo, etc.). Cargar aca cada uno apenas se decreta, tomandolo de la Acordada/Resolucion o del Boletin Oficial CABA. Se descuentan del plazo igual que la feria y cuentan como inhabiles para la cuenta de 30 dias habiles de la intimacion. El bot NUNCA declara un dia inhabil por su cuenta (una caida de conexion puede ser de tu red): cuando el EJE se cae, el parte lo avisa y vos confirmas contra fuente oficial antes de agregar la fecha aca. Formato: fecha suelta 'YYYY-MM-DD' o rango 'YYYY-MM-DD..YYYY-MM-DD'.",
+  "descontarEnCaducidad": true,
+  "ferias": [],
+  "inhabilesExcepcionales": []
+}

@@ -1,0 +1,58 @@
+# Dependencias
+node_modules/
+
+# Datos sensibles y locales (pero versionamos las plantillas .env*.example)
+.env
+.env.*
+!.env.example
+!.env.eje.example
+!.env.v2.example
+config.json
+
+# === Datos generados / planillas personales: NUNCA al repo (causas reservadas, datos
+# personales, gestion propia). Todos los .xlsx y .csv de la carpeta son datos. ===
+*.xlsx
+*.csv
+.eje-endpoints.json
+ALERTA_CRITICA_EJE.txt
+ALERTA_*.txt
+
+# Carpeta local de descarte (backups, docs con datos personales como CUIT). NO subir.
+test/
+
+# Docs de handoff con datos personales (mover a test/ o dejar fuera del repo publico)
+HANDOFF-EJE.md
+RESUMEN-NUEVO-CHAT.md
+
+# Notas internas de desarrollo (no son documentacion publica)
+CAMBIOS-v2.md
+CARTERA.md
+CORRECCIONES-EXCEL.md
+GUIA-PRUEBA.md
+INTEGRACION-MOVIMIENTOS.md
+MEJORAS-EXCEL.md
+MIGRACION-CLAVE-PJN.md
+RESUMEN-SISTEMA.md
+
+# Andamiaje de reconocimiento de la API (descartable, ya cumplio su funcion)
+diagnostico-eje.mjs
+test-busqueda.mjs
+diag-prescripcion.mjs
+
+# Perfil del navegador: guarda la sesion del PJN. NO subir.
+.pjn-profile/
+
+# Salidas (PDF y logs)
+pdfs/
+*.log
+
+# Carpetas de PDF por dia, por si CARPETA_PDFS apunta dentro del repo
+[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]/
+
+# Ejecutable generado por el configurador (tiene rutas de cada maquina)
+run-parte-pjn.bat
+run-parte-pjn.sh
+
+# Sistema operativo
+.DS_Store
+Thumbs.db

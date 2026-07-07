@@ -1,0 +1,23 @@
+{
+  "name": "parte-diario-pjn",
+  "version": "1.0.0",
+  "description": "Parte diario de novedades del Portal PJN por email (standalone).",
+  "type": "module",
+  "main": "parte-diario-pjn.mjs",
+  "scripts": {
+    "start": "node parte-diario-pjn.mjs",
+    "start:v2": "node parte-diario-pjn.v2.mjs",
+    "inspeccionar-excel": "node inspeccionar-excel.mjs",
+    "configurar": "node configurar.mjs"
+  },
+  "dependencies": {
+    "nodemailer": "^9.0.3",
+    "puppeteer": "^25.3.0"
+  },
+  "optionalDependencies": {
+    "exceljs": "^4.4.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

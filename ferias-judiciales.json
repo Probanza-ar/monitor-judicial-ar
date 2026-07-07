@@ -1,0 +1,7 @@
+{
+  "_nota": "Rangos de FERIA JUDICIAL para el computo de caducidad (art. 311 CPCCN: los plazos NO corren durante la feria). Distinto de feriados.json. Invierno 2026 confirmado por Acordada 11/2026 CSJN. Verano [VERIFICAR VIGENCIA] con la acordada anual de la CSJN.",
+  "ferias": [
+    "2026-01-01..2026-01-31",
+    "2026-07-20..2026-07-31"
+  ]
+}
