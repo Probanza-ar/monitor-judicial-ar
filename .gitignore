@@ -6,6 +6,7 @@ node_modules/
 .env.*
 !.env.example
 !.env.eje.example
+!.env.mev.example
 config.json
 
 # === Datos generados / planillas personales: NUNCA al repo (causas reservadas, datos
