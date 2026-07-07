@@ -6,7 +6,6 @@
   "main": "parte-diario-pjn.mjs",
   "scripts": {
     "start": "node parte-diario-pjn.mjs",
-    "start:v2": "node parte-diario-pjn.v2.mjs",
     "inspeccionar-excel": "node inspeccionar-excel.mjs",
     "configurar": "node configurar.mjs"
   },

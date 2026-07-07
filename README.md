@@ -158,6 +158,12 @@ El programa es el mismo; cambian los ejecutables: `sh configurar.sh` en vez de `
 `sh run-parte-pjn.sh` para probar, y cron en vez del Programador de tareas (el configurador te
 lo ofrece).
 
+## En un servidor (VPS)
+
+Para que corra 24/7 sin depender de tu PC: guia completa en `DESPLIEGUE-VPS.md`
+(Oracle Cloud Always Free en Ubuntu ARM, con los tres tropiezos tipicos resueltos:
+Chromium en ARM64, zona horaria del cron y el primer login sin pantalla).
+
 ---
 
 ## Licencia y uso

@@ -32,7 +32,7 @@ Nota fuero: si tu cartera es penal (IPP/PCyF), el modulo de caducidad de instanc
 ## Archivos
 
 Scripts:
-- parte-diario-eje.mjs = el bot principal (analogo a parte-diario-pjn.v2.mjs).
+- parte-diario-eje.mjs = el bot principal (analogo a parte-diario-pjn.mjs).
 - descubrir-eje.mjs    = confirma endpoints de la API y siembra la cartera. Correr 1 vez.
 - run-parte-eje.bat    = runner para la tarea programada.
 
