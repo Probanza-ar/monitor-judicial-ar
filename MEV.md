@@ -32,10 +32,13 @@ Modulos (lib/):
                        texto de proveido, diff de novedades.
 - cartera-mev.mjs    = cartera-mev.xlsx (clave nidCausa|pidJuzgado; columna Vigilar).
 - movimientos-mev.mjs = movimientos-mev.csv (log + estado previo para el diff).
-- caducidad-mev.mjs  = caducidad de instancia PBA (art. 310/315 CPCC BA).
+- caducidad-mev.mjs  = caducidad de instancia PBA (arts. 310/311/315 CPCC BA).
+- prescripcion-penal-mev.mjs = prescripcion de la accion penal (arts. 62-67 CP)
+                       para la cartera penal PBA. Usa penal-base.mjs (nucleo compartido).
 
 Datos/config:
-- feria-pba.json     = feria judicial SCBA (VACIA: cargar los rangos reales).
+- feria-pba.json     = feria judicial SCBA 2026 (CARGADA: verano 1-31/01 e
+                       invierno 20-31/07, Acuerdos SCBA 4203 y 4229).
 - .env.mev.example   = variables MEV_* para pegar al .env existente.
 
 ## Config (pegar al .env)
@@ -58,24 +61,48 @@ solo se ven entrando con ese fuero.
 2. Depuras homonimos con la columna "Vigilar" (=NO a las ajenas), igual que el EJE.
 3. Por causa vigilada, baja los pasos procesales y reporta solo lo posterior a lo
    ya visto (diff contra movimientos-mev.csv). Primera corrida = linea de base.
-4. Arma prioritarias + caducidad + agrupado por causa; manda mail; heartbeat;
-   alerta de falla (con aviso especifico si la clave MEV vencio).
+4. Arma prioritarias + caducidad + prescripcion penal + agrupado por causa; manda
+   mail; heartbeat; alerta de falla (con aviso especifico si la clave MEV vencio).
 
-## Caducidad de instancia PBA (art. 310/315 CPCC BA [VERIFICAR VIGENCIA])
+## Caducidad de instancia PBA (arts. 310/311/315 CPCC BA, VERIFICADO)
 
-Bifasica, calcada del enfoque CABA pero con la norma provincial:
-- Plazos art. 310: 6 meses (1ra/unica instancia); 3 meses (2da, justicia de paz,
-  sumario, sumarisimo, ejecutivo); o la prescripcion si fuere menor (esta ultima
-  variante el bot NO la computa: confirmarla a mano).
-- Art. 315: intimacion previa por unica vez, 5 dias habiles perentorios.
+Bifasica, calcada del enfoque CABA pero con la norma provincial (texto literal
+confirmado en normas.gba.gob.ar, jul-2026):
+- Plazos art. 310 (t. Ley 13.986): 6 meses (1ra/unica instancia); 3 meses (2da/
+  ulterior instancia y Justicia de Paz); 3 meses (sumario, sumarisimo, ejecutivo);
+  o la prescripcion si fuere menor (esta ultima variante el bot NO la computa:
+  confirmarla a mano).
+- Art. 311 (t. Ley 12.357): corre en dias inhabiles SALVO ferias (se descuentan)
+  y descontando paralizacion/suspension. El bot usa meses corridos con feria
+  descontada (feria-pba.json).
+- Art. 315 (t. Ley 13.986): la caducidad la pide POR UNICA VEZ la contraparte
+  (demandado en 1ra inst.), no de oficio; intimacion previa por unica vez, 5 dias
+  habiles perentorios. 2da fase: si la intimada activa y luego pasa igual plazo sin
+  actividad util, se decreta a pedido o de oficio.
 - Fases: EN CURSO -> PLAZO CUMPLIDO -> INTIMADA (cargar "Fecha Notif. Intimacion").
-- Excluye automatico: fuero Penal (rige prescripcion) y Laboral (impulso de
-  oficio, Ley 11.653). El amparo NO se excluye por defecto (a diferencia de CABA)
+- Excluye automatico: fuero Penal (rige prescripcion) y Laboral (impulso de oficio;
+  proc. laboral PBA Ley 15.057, vigente desde feb-2020, deroga la Ley 11.653, mod.
+  Ley 15.557/2025). El amparo NO se excluye por defecto (a diferencia de CABA)
   [REVISION NORMATIVA REQUERIDA: criterio SCBA]. Overrides: "Caducidad Aplica".
-- Descuento de feria: feria-pba.json (VACIO -> cargar la feria SCBA real).
+- Descuento de feria: feria-pba.json (CARGADA con la feria SCBA 2026).
 
 Reglas centralizadas en lib/reglas-plazos.mjs (JURIS.PBA), compartidas con los
 otros frentes.
+
+## Prescripcion de la accion penal PBA (arts. 62-67 CP)
+
+El CP es nacional: mismo instituto que en el EJE. Para la cartera penal (fuero
+Penal/Garantias/Correccional/etc.), donde la caducidad de instancia no corre. Es
+una CALCULADORA ASISTIDA (lib/prescripcion-penal-mev.mjs, nucleo penal-base.mjs):
+- Termino art. 62 (perpetua 15a; temporal = pena maxima, tope 12 / piso 2a; inhab.
+  5/1a; multa 2a) desde la fecha del hecho (art. 63) o el ultimo acto interruptivo
+  (art. 67: declaracion del imputado/art. 308 CPP BA, requerimiento de elevacion,
+  citacion a juicio, sentencia). Suspension si la victima es menor (delitos sexuales).
+- Lee de cartera-mev.xlsx: "Delito (art. CP)", "Fecha Hecho", "Pena Max (anios)",
+  "Ultima Interrupcion", "Prescripcion Aplica". Sin datos -> DATOS FALTANTES.
+- La pena maxima se prefila de una tabla interna por articulo [VERIFICAR VIGENCIA];
+  el abogado confirma o pisa. Prefija el asunto con [PRESCRIPCION xN] si hay
+  vencimientos proximos/operados.
 
 ## Estado / pendientes (lado del usuario)
 
@@ -83,19 +110,26 @@ otros frentes.
 2. Correr `node descubrir-mev.mjs` para sembrar cartera-mev.xlsx; depurar con "Vigilar".
 3. Cargar "Fecha Impulso Real" en las causas civiles/comerciales para que la
    caducidad pase de estimada a exacta.
-4. Cargar feria-pba.json con los rangos de la feria judicial SCBA (enero + invierno)
-   desde la acordada anual [REVISION NORMATIVA REQUERIDA].
-5. Sumar la tarea programada (08/18 hs) apuntando a run-parte-mev.bat.
+4. Para las causas penales: cargar "Delito (art. CP)", "Fecha Hecho", "Pena Max
+   (anios)" y "Ultima Interrupcion" para que la prescripcion pase de estimada a computo.
+5. feria-pba.json 2026 ya CARGADA; actualizar cada anio con el nuevo Acuerdo SCBA
+   (enero suele ser 1-31; la feria de invierno cambia de fechas).
+6. Sumar la tarea programada (08/18 hs) apuntando a run-parte-mev.bat.
 
-## Marcadores de integridad pendientes
+## Marcadores de integridad
 
-- Normas [VERIFICAR VIGENCIA]: CPCC BA arts. 310/311/315 (Dec-Ley 7.425/68;
-  310 y 315 t. Ley 13.986/2009; computo art. 311 t. Ley 12.357); Ley 11.653
-  (procedimiento laboral PBA, impulso de oficio).
-- [REVISION NORMATIVA REQUERIDA]: feria judicial SCBA (feria-pba.json vacio);
-  criterio de la SCBA sobre caducidad de instancia en amparo (Ley 13.928).
-- Prescripcion penal PBA: frente PENDIENTE (el nucleo comun CP esta en
-  lib/penal-base.mjs; falta el modulo provincial analogo a prescripcion-penal-eje.mjs).
+- Normas VERIFICADAS (normas.gba.gob.ar, texto consolidado, jul-2026): CPCC BA
+  arts. 310/311/315 confirmados texto literal (Dec-Ley 7.425/68 VIGENTE con mod.;
+  310 y 315 t. Ley 13.986; computo art. 311 t. Ley 12.357). Fuero laboral: proc.
+  laboral PBA es Ley 15.057 (vigente feb-2020; deroga la Ley 11.653; mod. Ley
+  15.557/2025) - la cita anterior a la 11.653 estaba desactualizada, corregida.
+- Feria SCBA 2026 CARGADA (feria-pba.json): verano 1-31/01 (Acuerdo 4203) e
+  invierno 20-31/07 (Acuerdo 4229), confirmadas en scba.gov.ar.
+- Prescripcion penal PBA: HECHA (lib/prescripcion-penal-mev.mjs, arts. 62-67 CP,
+  nucleo penal-base.mjs). Las penas de la tabla interna quedan [VERIFICAR VIGENCIA]:
+  son prefill; el abogado confirma o pisa con "Pena Max (anios)".
+- [REVISION NORMATIVA REQUERIDA]: criterio de la SCBA sobre caducidad de instancia
+  en amparo (Ley 13.928) - el bot NO lo excluye por defecto, a diferencia de CABA.
 
 ## Gotcha del recon (ver test/RECON-MEV.md)
 

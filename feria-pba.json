@@ -1,7 +1,10 @@
 {
-  "_nota": "Feria e inhabiles judiciales del Poder Judicial de la PROVINCIA de Buenos Aires (SCBA). NO es la feria de la CSJN ni la de CABA. [REVISION NORMATIVA REQUERIDA: cargar los rangos reales de la feria SCBA - enero y feria de invierno - desde la acordada anual de la Suprema Corte (scba.gov.ar) antes de confiar en el descuento]. El computo de la caducidad (art. 311 CPCC BA, t. Ley 12.357 [VERIFICAR VIGENCIA]) usa meses corridos con descuento de feria (criterio conservador, igual que Nacion/CABA).",
-  "_nota_inhabiles": "inhabilesExcepcionales: asuetos / dias inhabiles decretados AD-HOC por la SCBA (paro judicial con asueto, caida de sistemas, duelo, etc.). Cargar cada fecha apenas se decreta, tomandola de la resolucion/acordada SCBA o del Boletin Oficial PBA. El bot NUNCA declara un dia inhabil por su cuenta: si la MEV se cae, el parte lo avisa y vos confirmas contra fuente oficial antes de agregar la fecha aca. Formato: fecha suelta 'YYYY-MM-DD' o rango 'YYYY-MM-DD..YYYY-MM-DD'.",
+  "_nota": "Feria e inhabiles judiciales del Poder Judicial de la PROVINCIA de Buenos Aires (SCBA). NO es la feria de la CSJN ni la de CABA. El computo de la caducidad (art. 311 CPCC BA, t. Ley 12.357, VERIFICADO texto literal en normas.gba.gob.ar jul-2026: los plazos corren en dias inhabiles SALVO las ferias judiciales, que se descuentan) usa meses corridos con descuento de feria (criterio conservador, consistente con el texto del 311). Feria 2026 CONFIRMADA por acordadas SCBA (fuente: scba.gov.ar): VERANO 1 al 31/01/2026 inclusive (Acuerdo 4203, 07/10/2025) e INVIERNO 20 al 31/07/2026 inclusive (Acuerdo 4229). Para 2027 actualizar: enero suele ser 1-31, pero la feria de invierno cambia de fechas cada anio (revisar el Acuerdo anual de la SCBA).",
+  "_nota_inhabiles": "inhabilesExcepcionales: asuetos / dias inhabiles decretados AD-HOC por la SCBA (asueto administrativo, paro judicial con asueto, caida de sistemas, duelo, etc.). Cargar cada fecha apenas se decreta, tomandola del Acuerdo/Resolucion SCBA o del Boletin Oficial PBA. El bot NUNCA declara un dia inhabil por su cuenta: si la MEV se cae, el parte lo avisa y vos confirmas contra fuente oficial antes de agregar la fecha aca. Formato: fecha suelta 'YYYY-MM-DD' o rango 'YYYY-MM-DD..YYYY-MM-DD'.",
   "descontarEnCaducidad": true,
-  "ferias": [],
+  "ferias": [
+    "2026-01-01..2026-01-31",
+    "2026-07-20..2026-07-31"
+  ],
   "inhabilesExcepcionales": []
 }

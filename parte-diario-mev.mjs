@@ -33,6 +33,7 @@ import { hayCredenciales } from "./lib/mev-auth.mjs";
 import { upsertCausas, leerVigiladas } from "./lib/cartera-mev.mjs";
 import { estadoPrevio, registrarPasos } from "./lib/movimientos-mev.mjs";
 import { calcularCaducidadMev, renderCaducidadMev } from "./lib/caducidad-mev.mjs";
+import { calcularPrescripcionMev, renderPrescripcionMev } from "./lib/prescripcion-penal-mev.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -143,7 +144,7 @@ function crearTransport() {
   });
 }
 
-function armarParte(novedades, ventanaDesc, vigiladas, fallos, caducidad) {
+function armarParte(novedades, ventanaDesc, vigiladas, fallos, caducidad, prescripcion) {
   const porCausa = new Map();
   for (const n of novedades) {
     const k = n.causa.key;
@@ -169,6 +170,8 @@ function armarParte(novedades, ventanaDesc, vigiladas, fallos, caducidad) {
   }
 
   if (caducidad && caducidad.texto) { texto += caducidad.texto + "\n"; html += caducidad.html; }
+  // Prescripcion de la accion penal (cartera penal PBA).
+  if (prescripcion && prescripcion.texto) { texto += prescripcion.texto + "\n"; html += prescripcion.html; }
 
   if (fallos && fallos.length) {
     const posibleCaida = fallos.length >= Math.max(3, Math.ceil(vigiladas * 0.5));
@@ -192,14 +195,14 @@ function armarParte(novedades, ventanaDesc, vigiladas, fallos, caducidad) {
     }
     texto += "\n"; html += "</ul>";
   }
-  html += `<hr><p style="color:#888;font-size:12px">Generado automaticamente desde la MEV (mev.scba.gov.ar). Los datos de la MEV son de caracter referencial (asi lo aclara la propia SCBA). La deteccion de PRIORITARIAS y el computo de caducidad son orientativos y no reemplazan la lectura de la actuacion ni el criterio del abogado. Verificar en la MEV antes de actuar.</p>`;
-  return { texto, html, causas: porCausa.size, prioritarias: prioritarias.length, caducidadRevision: (caducidad && caducidad.revision) || 0 };
+  html += `<hr><p style="color:#888;font-size:12px">Generado automaticamente desde la MEV (mev.scba.gov.ar). Los datos de la MEV son de caracter referencial (asi lo aclara la propia SCBA). La deteccion de PRIORITARIAS y el computo de caducidad/prescripcion son orientativos y no reemplazan la lectura de la actuacion ni el criterio del abogado. Verificar en la MEV antes de actuar.</p>`;
+  return { texto, html, causas: porCausa.size, prioritarias: prioritarias.length, caducidadRevision: (caducidad && caducidad.revision) || 0, prescripcionAlerta: (prescripcion && prescripcion.alerta) || 0 };
 }
 
-async function enviar({ texto, html }, novedades, causas, prioritarias, caducidadRevision = 0) {
+async function enviar({ texto, html }, novedades, causas, prioritarias, caducidadRevision = 0, prescripcionAlerta = 0) {
   const t = crearTransport();
   const fechaCorta = new Intl.DateTimeFormat("es-AR", { timeZone: "America/Argentina/Buenos_Aires", dateStyle: "short" }).format(new Date());
-  const prefijo = (caducidadRevision ? `[REVISION CADUCIDAD x${caducidadRevision}] ` : "") + (prioritarias ? `[${prioritarias} PRIORITARIA(S)] ` : "");
+  const prefijo = (prescripcionAlerta ? `[PRESCRIPCION x${prescripcionAlerta}] ` : "") + (caducidadRevision ? `[REVISION CADUCIDAD x${caducidadRevision}] ` : "") + (prioritarias ? `[${prioritarias} PRIORITARIA(S)] ` : "");
   const asunto = `${prefijo}Parte MEV ${fechaCorta} - ${novedades} novedad(es) / ${causas} causa(s)`;
   log("Conectando al servidor de correo...");
   await t.sendMail({ from: CFG.mailFrom, to: CFG.mailTo, subject: asunto, text: texto, html });
@@ -350,8 +353,20 @@ async function main() {
     caducidadRender = renderCaducidadMev(cad);
   } catch (e) { log(`Caducidad MEV omitida: ${e.message}`); }
 
-  const parte = armarParte(novedades, desc, vigiladas.length, fallos, caducidadRender);
-  await enviar(parte, novedades.length, parte.causas, parte.prioritarias, parte.caducidadRevision);
+  // Prescripcion de la accion penal PBA (arts. 62-67 CP; lee cartera-mev.xlsx). Para la
+  // cartera penal, donde la caducidad de instancia no aplica. Sin fetchPasos: la ultima
+  // interrupcion se toma del dato manual de la cartera (la auto-deteccion por pasos queda
+  // disponible en el modulo pero no se conecta aca para no reentrar a cada jurisdiccion).
+  let prescripcionRender = null;
+  try {
+    const pre = await calcularPrescripcionMev();
+    if (pre.nota) log(`Prescripcion penal PBA: ${pre.nota}`);
+    else if (pre.items.length) log(`Prescripcion penal PBA: ${pre.items.length} causa(s) en zona/riesgo; ${pre.sinDatos || 0} sin datos completos`);
+    prescripcionRender = renderPrescripcionMev(pre);
+  } catch (e) { log(`Prescripcion penal PBA omitida: ${e.message}`); }
+
+  const parte = armarParte(novedades, desc, vigiladas.length, fallos, caducidadRender, prescripcionRender);
+  await enviar(parte, novedades.length, parte.causas, parte.prioritarias, parte.caducidadRevision, parte.prescripcionAlerta);
 
   // Registrar despues del mail (si el mail falla, no se marca visto y se reintenta).
   const rc = await registrarPasos(paraRegistrar);
