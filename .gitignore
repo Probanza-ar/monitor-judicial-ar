@@ -44,6 +44,7 @@ diag-prescripcion.mjs
 
 # Salidas (PDF y logs)
 pdfs/
+pdfs-eje/
 *.log
 
 # Carpetas de PDF por dia, por si CARPETA_PDFS apunta dentro del repo

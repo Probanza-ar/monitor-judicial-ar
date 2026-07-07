@@ -47,6 +47,10 @@ Genera:
   Estado, Fecha Inicio, Ult. Actuacion) + gestion tuya (Vigilar, Ref/Cliente, Fecha
   Impulso Real, Caducidad Meses, Caducidad Aplica, Fecha Notif. Intimacion, Observaciones).
 - movimientos-eje.csv = actuaciones reportadas (dedup por act_id).
+- pdfs-eje/AAAA-MM-DD/ = copia local de los PDF de las novedades del dia (ademas se
+  adjuntan al mail). Se puede apagar/redirigir con EJE_ADJUNTAR_PDFS / EJE_GUARDAR_PDFS_LOCAL
+  / EJE_CARPETA_PDFS / EJE_MAX_PDFS. Endpoint: GET /expedientes/actuaciones/pdf?datos=...
+  (usa el token si hay credenciales, asi baja tambien los PDF de reservadas).
 - feria-caba.json     = feria judicial CABA (a completar; ver "Plazos" abajo).
 - ultima-corrida-eje.log / parte-eje.log = heartbeat y log. ALERTA_CRITICA_EJE.txt si falla todo.
 

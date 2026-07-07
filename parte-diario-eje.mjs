@@ -29,7 +29,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import nodemailer from "nodemailer";
-import { buscarCausas, misCausas, listarActuaciones, actuacionesNuevas, parseDia } from "./lib/eje-client.mjs";
+import { buscarCausas, misCausas, listarActuaciones, actuacionesNuevas, parseDia, descargarPdf } from "./lib/eje-client.mjs";
 import { hayCredenciales } from "./lib/eje-auth.mjs";
 import { upsertCausas, leerVigiladas } from "./lib/cartera-eje.mjs";
 import { estadoPrevio, registrarActuaciones } from "./lib/movimientos-eje.mjs";
@@ -70,6 +70,11 @@ const CFG = {
   enviarSinNovedades: (process.env.ENVIAR_SIN_NOVEDADES || "true") !== "false",
   maxExp: Number(process.env.EJE_MAX_EXP || 500),
   pausaMs: Number(process.env.EJE_PAUSA_MS || 250),
+  // PDFs de las novedades: adjuntar al mail y/o guardar copia local por fecha (como el PJN).
+  adjuntarPdfs: (process.env.EJE_ADJUNTAR_PDFS || "true") !== "false",
+  guardarPdfs: (process.env.EJE_GUARDAR_PDFS_LOCAL || "true") !== "false",
+  carpetaPdfs: process.env.EJE_CARPETA_PDFS || path.resolve(__dirname, "pdfs-eje"),
+  maxPdfs: Number(process.env.EJE_MAX_PDFS || 20),
   alertaFalla: (process.env.ALERTA_FALLA || "true") !== "false",
   alertaLocalDir: process.env.ALERTA_LOCAL_DIR || __dirname,
 };
@@ -188,8 +193,9 @@ function armarParte(novedades, ventanaDesc, vigiladas, fallos, caducidad, prescr
     html += `<h3 style="margin:12px 0 2px">${causa.cuij || "s/CUIJ"} <span style="opacity:.7;font-size:13px">(exp ${causa.expId})</span></h3><div style="color:#555">${causa.caratula}${causa.estado ? ` <b>[${causa.estado}]</b>` : ""}</div><ul>`;
     for (const a of acts) {
       const prio = esPrioritaria(a) ? " [PRIORITARIA]" : "";
-      texto += `  - ${a.fechaFirma} [${a.codigo}] ${a.titulo}${prio}${a.firmantes ? " - " + a.firmantes : ""}\n`;
-      html += `<li><b>${a.fechaFirma}</b> [${a.codigo}] ${a.titulo}${prio ? ` <span style="color:#1e3a8b">[PRIORITARIA]</span>` : ""}${a.firmantes ? `<br><span style="color:#777;font-size:12px">${a.firmantes}</span>` : ""}</li>`;
+      const pdf = a._tienePdf ? "  [PDF adjunto]" : "";
+      texto += `  - ${a.fechaFirma} [${a.codigo}] ${a.titulo}${prio}${pdf}${a.firmantes ? " - " + a.firmantes : ""}\n`;
+      html += `<li><b>${a.fechaFirma}</b> [${a.codigo}] ${a.titulo}${prio ? ` <span style="color:#1e3a8b">[PRIORITARIA]</span>` : ""}${a._tienePdf ? ` &mdash; <span style="color:#1e7d32">PDF adjunto</span>` : ""}${a.firmantes ? `<br><span style="color:#777;font-size:12px">${a.firmantes}</span>` : ""}</li>`;
     }
     texto += "\n"; html += "</ul>";
   }
@@ -197,14 +203,14 @@ function armarParte(novedades, ventanaDesc, vigiladas, fallos, caducidad, prescr
   return { texto, html, causas: porExp.size, prioritarias: prioritarias.length, caducidadRevision: (caducidad && caducidad.revision) || 0, prescripcionAlerta: (prescripcion && prescripcion.alerta) || 0 };
 }
 
-async function enviar({ texto, html }, novedades, causas, prioritarias, caducidadRevision = 0, prescripcionAlerta = 0) {
+async function enviar({ texto, html }, novedades, causas, prioritarias, caducidadRevision = 0, prescripcionAlerta = 0, adjuntos = []) {
   const t = crearTransport();
   const fechaCorta = new Intl.DateTimeFormat("es-AR", { timeZone: "America/Argentina/Buenos_Aires", dateStyle: "short" }).format(new Date());
   const prefijo = (prescripcionAlerta ? `[PRESCRIPCION x${prescripcionAlerta}] ` : "") + (caducidadRevision ? `[REVISION CADUCIDAD x${caducidadRevision}] ` : "") + (prioritarias ? `[${prioritarias} PRIORITARIA(S)] ` : "");
   const asunto = `${prefijo}Parte JusCABA ${fechaCorta} - ${novedades} novedad(es) / ${causas} causa(s)`;
   log("Conectando al servidor de correo...");
-  await t.sendMail({ from: CFG.mailFrom, to: CFG.mailTo, subject: asunto, text: texto, html });
-  log(`Email enviado a ${CFG.mailTo}`);
+  await t.sendMail({ from: CFG.mailFrom, to: CFG.mailTo, subject: asunto, text: texto, html, attachments: adjuntos });
+  log(`Email enviado a ${CFG.mailTo} (${adjuntos.length} adjunto/s)`);
 }
 
 function alertaLocal(err, motivoMailFallo) {
@@ -336,6 +342,28 @@ async function main() {
     return;
   }
 
+  // 3b) PDFs de las novedades: adjuntar al mail + guardar copia local por fecha.
+  const adjuntos = [];
+  if ((CFG.adjuntarPdfs || CFG.guardarPdfs) && novedades.length) {
+    let dir = null;
+    if (CFG.guardarPdfs) { dir = path.join(CFG.carpetaPdfs, hoyAR()); try { fs.mkdirSync(dir, { recursive: true }); } catch (e) { log(`No se pudo crear carpeta de PDFs: ${e.message}`); dir = null; } }
+    let guardados = 0, sinDoc = 0;
+    for (const n of novedades) {
+      if (!CFG.guardarPdfs && adjuntos.length >= CFG.maxPdfs) break; // ya no hace falta bajar mas
+      const a = n.act;
+      let res;
+      try { res = await descargarPdf({ actId: a.actId, expId: n.causa.expId, esNota: a.esNota }); }
+      catch (e) { res = { ok: false, motivo: e.message }; }
+      if (!res.ok) { sinDoc++; continue; } // mero tramite sin PDF o error puntual: se saltea
+      a._tienePdf = true;
+      const nombre = `${(n.causa.cuij || "exp" + n.causa.expId).replace(/[^\w.-]+/g, "_")}_${a.actId}.pdf`;
+      if (dir) { try { fs.writeFileSync(path.join(dir, nombre), res.buf); guardados++; } catch (e) { log(`No se pudo guardar ${nombre}: ${e.message}`); } }
+      if (CFG.adjuntarPdfs && adjuntos.length < CFG.maxPdfs) adjuntos.push({ filename: nombre, content: res.buf });
+      await sleep(CFG.pausaMs);
+    }
+    log(`PDFs EJE: ${guardados} guardado(s)${dir ? " en " + dir : ""}, ${adjuntos.length} adjuntado(s), ${sinDoc} sin documento/error.`);
+  }
+
   // Caducidad de instancia CAyT (lee cartera-eje.xlsx; independiente de las novedades).
   let caducidadRender = null;
   try {
@@ -368,7 +396,7 @@ async function main() {
   } catch (e) { log(`Prescripcion penal omitida: ${e.message}`); }
 
   const parte = armarParte(novedades, desc, vigiladas.length, fallos, caducidadRender, prescripcionRender);
-  await enviar(parte, novedades.length, parte.causas, parte.prioritarias, parte.caducidadRevision, parte.prescripcionAlerta);
+  await enviar(parte, novedades.length, parte.causas, parte.prioritarias, parte.caducidadRevision, parte.prescripcionAlerta, adjuntos);
 
   // Registrar despues del mail (si el mail falla, no marcamos como visto y se reintenta).
   const rc = await registrarActuaciones(paraRegistrar);
