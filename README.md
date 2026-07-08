@@ -4,7 +4,7 @@ Programa gratuito y de codigo abierto que arma solo un Excel con TODAS tus causa
 actualiza dos veces por dia. En cada corrida revisa tus expedientes, te manda un parte
 diario por email con las novedades, y te avisa de plazos criticos (caducidad de instancia
 y prescripcion penal). Pensado para abogados de los tres fueros: Nacion (PJN), Ciudad de
-Buenos Aires (JusCABA/EJE) y Provincia de Buenos Aires.
+Buenos Aires (JusCABA/EJE) y Provincia de Buenos Aires (SCBA / MEV).
 
 Corre en tu propia computadora, con tus credenciales. Nadie mas ve tus datos: no hay
 servidor central, no se sube nada a la nube, no tiene costo.
@@ -29,12 +29,27 @@ los plazos criticos de cada causa y te avisa antes de que venzan.
 ## Que hace
 
 **1) Parte diario de novedades.** Entra a los portales, junta lo nuevo de tus causas
-(despachos, cedulas, actuaciones) y te manda un email con el resumen. Frentes:
+(despachos, cedulas, actuaciones) y te manda un email con el resumen. Tres frentes, cada
+uno independiente (su propia tarea y su propio mail; comparten el `.env`):
 
-- **PJN (Nacion/Federal).** Feed autenticado de tus novedades; adjunta y guarda los PDF.
-- **JusCABA / EJE (Ciudad).** Baja tu cartera exacta ("Mis Causas") por API autenticada,
-  incluidas las causas reservadas. Diff diario contra lo ya visto.
-- **Provincia de Buenos Aires (SCBA/MEV).** En incorporacion.
+- **Poder Judicial de la Nacion (PJN).** Feed autenticado de tus novedades; adjunta y
+  guarda los PDF.
+- **Justicia de la Ciudad de Buenos Aires (JusCABA / EJE).** Baja tu cartera exacta
+  ("Mis Causas") por API autenticada, incluidas las causas reservadas. Diff diario contra
+  lo ya visto.
+- **Provincia de Buenos Aires (SCBA / MEV).** Recorre tus sets de la Mesa de Entradas
+  Virtual (incluida la "Lista de Causas con Autorizacion") por cada departamento judicial
+  y fuero que configures. Diff diario de los pasos procesales.
+
+En cualquiera de los tres, el programa:
+
+- Genera un archivo Excel con el listado de todas tus causas y calcula los plazos. Lo
+  mantiene actualizado automaticamente en cada corrida.
+- Revisa cada expediente y detecta despachos, cedulas y documentos nuevos.
+- Te envia un correo electronico con un resumen de las novedades (y, si no hubo, tambien
+  te lo informa).
+- Adjunta los PDF de despachos y cedulas al email.
+- Guarda automaticamente una copia local de todos los PDF, organizados por fecha.
 
 **2) Control de plazos (orientativo).**
 
@@ -51,7 +66,7 @@ afirma una vigencia o una pena como certeza; te señala que la confirmes.
 
 **3) Flujo general del programa:**
 
-    PJN / EJE
+    PJN / EJE / MEV
         |
         v
     Descarga novedades
@@ -72,7 +87,7 @@ afirma una vigencia o una pena como certeza; te señala que la confirmes.
 1. Una computadora (Windows, Mac o Linux) prendida a la hora del parte.
 2. Node.js (LTS) desde https://nodejs.org. Para verificar: en una terminal, `node -v`.
 3. Una cuenta de Gmail con verificacion en 2 pasos (ver Paso 1).
-4. Tus credenciales del portal que uses (PJN y/o EJE).
+4. Tus credenciales del portal que uses (PJN, EJE y/o MEV).
 
 ---
 
@@ -127,6 +142,32 @@ Detalle del frente y de los computos de plazos: ver `EJE.md`.
 
 ---
 
+## Frente MEV / SCBA (Provincia de Buenos Aires)
+
+Tercer frente, tambien independiente, con su propia tarea y su propio mail; comparte el
+`.env` con el PJN y el EJE. A diferencia del EJE, la MEV no tiene consulta anonima ni API
+JSON: el bot loguea siempre (con re-login automatico ante timeout y aviso si la clave
+vencio) y parsea el HTML del portal.
+
+1. Copiá las variables de `.env.mev.example` al final de tu `.env` y completá:
+   `MEV_USUARIO`, `MEV_CLAVE`, `MEV_DEPTO_REGISTRADO` (el "Creado en" del login; `aa` =
+   Todos los Deptos) y `MEV_JURISDICCIONES` (lista separada por `;` de
+   `Depto[:penal][:familia]`; el fuero penal/familia se pasa como flag porque las causas
+   reservadas solo se ven entrando con ese fuero).
+2. Sembrá tu cartera: `node descubrir-mev.mjs` (recorre los sets de cada jurisdiccion
+   configurada, incluida la "Lista de Causas con Autorizacion"). Depurá homonimos con la
+   columna "Vigilar", igual que en el EJE.
+3. Para que la caducidad de instancia pase de estimada a exacta, cargá "Fecha Impulso
+   Real" en las causas civiles/comerciales.
+4. Para que la prescripcion penal pase de estimada a computo, cargá "Delito (art. CP)",
+   "Fecha Hecho", "Pena Max (anios)" y "Ultima Interrupcion" en las causas penales.
+5. Probá el parte: `node parte-diario-mev.mjs`.
+6. Agendá `run-parte-mev.bat` en el Programador de tareas (ej. 08:00 y 18:00).
+
+Detalle del frente y de los computos de plazos: ver `MEV.md`.
+
+---
+
 ## Control de plazos - como funciona
 
 El programa primero DESCARGA todos los movimientos (actuaciones) de cada causa y recien
@@ -149,6 +190,8 @@ se marca como estimado. El abogado confirma antes de actuar.
   el correo. Desactivalo un momento o cambia el puerto SMTP a 587 en el `.env`.
 - Se traba en el login del PJN la primera vez: en `.env` poné `HEADLESS=false`, corre, logueate
   a mano una vez, y volve a `HEADLESS=true`.
+- MEV: si el mail de falla avisa clave vencida, actualizá `MEV_CLAVE` en el `.env`; el bot
+  reintenta el login solo, pero no puede generar una clave nueva por vos.
 
 ---
 

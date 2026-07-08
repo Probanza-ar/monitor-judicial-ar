@@ -112,7 +112,7 @@ una CALCULADORA ASISTIDA (lib/prescripcion-penal-mev.mjs, nucleo penal-base.mjs)
    caducidad pase de estimada a exacta.
 4. Para las causas penales: cargar "Delito (art. CP)", "Fecha Hecho", "Pena Max
    (anios)" y "Ultima Interrupcion" para que la prescripcion pase de estimada a computo.
-5. feria-pba.json 2026 ya CARGADA; actualizar cada anio con el nuevo Acuerdo SCBA
+5. feria-pba.json 2026; actualizar cada anio con el nuevo Acuerdo SCBA
    (enero suele ser 1-31; la feria de invierno cambia de fechas).
 6. Sumar la tarea programada (08/18 hs) apuntando a run-parte-mev.bat.
 
