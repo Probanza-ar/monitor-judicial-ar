@@ -432,7 +432,7 @@ function armarParte(nuevos, ventanaDesc, fallos, caducidad, penal) {
     }
   }
   html += `<hr><p style="color:#888;font-size:12px">Generado automaticamente. La deteccion de PRIORITARIAS es orientativa y no reemplaza la lectura del despacho. Verificar en el Portal PJN antes de computar plazos. La firma es del abogado.</p>`;
-  return { texto, html, fueros: porFuero.size, prioritarias: prioritarias.length, revisionCaducidad: (caducidad && caducidad.revision) || 0 };
+  return { texto, html, fueros: porFuero.size, prioritarias: prioritarias.length, revisionCaducidad: (caducidad && caducidad.revision) || 0, aplicabilidadCaducidad: (caducidad && caducidad.aplicabilidad) || 0 };
 }
 
 // ─── 5) email ─────────────────────────────────────────────────────────────────
@@ -444,10 +444,10 @@ function crearTransport() {
   });
 }
 
-async function enviar({ texto, html }, adjuntos, nuevos, fueros, prioritarias, revisionCaducidad = 0) {
+async function enviar({ texto, html }, adjuntos, nuevos, fueros, prioritarias, revisionCaducidad = 0, aplicabilidadCaducidad = 0) {
   const t = crearTransport();
   const fechaCorta = new Intl.DateTimeFormat("es-AR", { timeZone: "America/Argentina/Buenos_Aires", dateStyle: "short" }).format(new Date());
-  const prefijo = (revisionCaducidad ? `[REVISION CADUCIDAD x${revisionCaducidad}] ` : "") + (prioritarias ? `[${prioritarias} PRIORITARIA(S)] ` : "");
+  const prefijo = (revisionCaducidad ? `[REVISION CADUCIDAD x${revisionCaducidad}] ` : "") + (aplicabilidadCaducidad ? `[VERIFICAR APLICABILIDAD x${aplicabilidadCaducidad}] ` : "") + (prioritarias ? `[${prioritarias} PRIORITARIA(S)] ` : "");
   const asunto = `${prefijo}Parte PJN ${fechaCorta} - ${nuevos} novedad(es) / ${fueros} fuero(s)`;
   log("Conectando al servidor de correo para enviar...");
   await t.sendMail({ from: CFG.mailFrom, to: CFG.mailTo, subject: asunto, text: texto, html, attachments: adjuntos });
@@ -569,8 +569,8 @@ async function main() {
       const { calcularCaducidad, renderCaducidad } = await import("./lib/caducidad.mjs");
       const cad = await calcularCaducidad();
       if (cad.nota) log(`Caducidad: ${cad.nota}`);
-      if (cad.items.length) log(`Caducidad: ${cad.items.length} causa(s) en riesgo; ${cad.sinImpulso || 0} sin impulso verificado`);
-      caducidadRender = renderCaducidad(cad.items, cad.sinImpulso || 0);
+      if (cad.items.length) log(`Caducidad: ${cad.items.length} causa(s) en riesgo; ${cad.sinImpulso || 0} sin impulso verificado; ${cad.sinAplicabilidad || 0} sucesion/voluntaria a revisar`);
+      caducidadRender = renderCaducidad(cad.items, cad.sinImpulso || 0, cad.sinAplicabilidad || 0);
     } catch (e) {
       log(`Caducidad omitida: ${e.message}`);
     }
@@ -596,7 +596,7 @@ async function main() {
   }
 
   const parte = armarParte(nuevos, desc, fallos, caducidadRender, penalRender);
-  await enviar(parte, adjuntos, nuevos.length, parte.fueros, parte.prioritarias, parte.revisionCaducidad);
+  await enviar(parte, adjuntos, nuevos.length, parte.fueros, parte.prioritarias, parte.revisionCaducidad, parte.aplicabilidadCaducidad);
   registrarCorrida(`${nuevos.length} novedades, ${parte.prioritarias} prioritarias, ${adjuntos.length} PDFs, ${fallos.length} descargas fallidas`);
 
   // Registro de novedades en CSV aparte (Plan B seguro: NO reescribe el Excel maestro,
