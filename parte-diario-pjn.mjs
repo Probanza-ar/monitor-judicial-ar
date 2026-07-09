@@ -584,6 +584,11 @@ async function main() {
       const pen = await calcularPenal();
       if (pen.nota) log(`Penal: ${pen.nota}`);
       if (pen.inactividad.length || pen.prescripcion.length) log(`Penal: ${pen.prescripcion.length} prescripcion, ${pen.inactividad.length} inactividad`);
+      if (pen.sinTabla && pen.sinTabla.length) log(`Penal: ${pen.sinTabla.length} causa(s) con articulo detectado sin dato de pena (revisar)`);
+      if (pen.delito && pen.delito.detectadas) {
+        if (pen.delito.error) log(`Penal: no se pudo volcar "Delito (art. CP)" (${pen.delito.detectadas} deteccion[es]): ${pen.delito.error}`);
+        else if (pen.delito.salida) log(`Penal: "Delito (art. CP)" completado en ${pen.delito.detectadas} fila(s). Archivo: ${pen.delito.salida}`);
+      }
       penalRender = renderPenal(pen);
     } catch (e) {
       log(`Penal omitido: ${e.message}`);
