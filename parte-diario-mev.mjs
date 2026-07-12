@@ -79,7 +79,11 @@ function parseJurisdicciones(lista) {
     return { clave: s, depto, penal: flags.includes("penal"), familia: flags.includes("familia") };
   });
 }
-const JURS = parseJurisdicciones(CFG.jurisdicciones);
+// MEV_JURISDICCIONES=auto (o vacio): el parte NO re-siembra (evita barrer las 69
+// jurisdicciones cada dia); usa las causas ya cargadas en cartera-mev.xlsx. Para
+// descubrir/actualizar la cartera se corre descubrir-mev.mjs (modo auto).
+const AUTO_MEV = CFG.jurisdicciones.length === 0 || CFG.jurisdicciones.map((s) => s.toLowerCase()).includes("auto");
+const JURS = AUTO_MEV ? [] : parseJurisdicciones(CFG.jurisdicciones);
 
 // Feriados nacionales + .env (mismo esquema que los otros partes).
 function expandirFeriados(lista) {
@@ -250,10 +254,12 @@ async function main() {
     if (!v) throw new Error(`Falta ${k} en .env`);
   }
   if (!hayCredenciales()) throw new Error("Faltan MEV_USUARIO/MEV_CLAVE en .env (la MEV no tiene consulta anonima)");
-  if (!JURS.length) throw new Error("Falta MEV_JURISDICCIONES en .env (ej: Moron:penal;San Isidro)");
+  if (!JURS.length && !AUTO_MEV) throw new Error("Falta MEV_JURISDICCIONES en .env (ej: Moron:penal;San Isidro, o 'auto')");
 
   // 1) Siembra: por cada jurisdiccion, recorrer TODOS los sets (incluye el set
   //    automatico "Lista de Causas con AUTORIZACION") y volcar a cartera-mev.xlsx.
+  //    En modo auto se omite: se usa la cartera ya sembrada por descubrir-mev.mjs.
+  if (AUTO_MEV) log("MEV_JURISDICCIONES=auto: sin re-siembra; uso cartera-mev.xlsx (correr descubrir-mev.mjs para actualizarla).");
   const orgPorJuz = new Map(); // pidJuzgado -> nombre de organismo (para la cartera)
   for (const jur of JURS) {
     try {
@@ -294,7 +300,8 @@ async function main() {
 
   const porJur = new Map();
   for (const c of vigiladas.slice(0, CFG.maxExp)) {
-    const k = c.jurisdiccion || JURS[0].clave;
+    const k = c.jurisdiccion || (JURS[0] && JURS[0].clave) || "";
+    if (!k) { fallos.push({ ref: c.expedienteRef || c.nidCausa, motivo: "causa sin jurisdiccion en la cartera (re-correr descubrir-mev.mjs)" }); continue; }
     if (!porJur.has(k)) porJur.set(k, []);
     porJur.get(k).push(c);
   }

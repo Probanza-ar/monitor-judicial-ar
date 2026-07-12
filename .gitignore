@@ -39,6 +39,10 @@ diagnostico-eje.mjs
 test-busqueda.mjs
 diag-prescripcion.mjs
 
+# Diagnosticos MEV (volcados de HTML con datos personales; descartables)
+diag-*.mjs
+diag-*.html
+
 # Perfil del navegador: guarda la sesion del PJN. NO subir.
 .pjn-profile/
 
