@@ -180,6 +180,15 @@ Lo que no surge de los movimientos -por ejemplo la fecha del hecho, que esta en 
 la denuncia- se toma de una columna opcional del Excel o se estima, y en ese caso el aviso
 se marca como estimado. El abogado confirma antes de actuar.
 
+El resultado del calculo se ESCRIBE en el propio Excel de la cartera, en columnas que el bot
+completa y actualiza en cada corrida (no las cargas vos): "Caduc. Vence", "Caduc. Dias",
+"Caduc. Alerta" (y "Caduc. Fase" en EJE/MEV) para la caducidad, y "Prescr. Vence",
+"Prescr. Dias", "Prescr. Alerta" para la prescripcion penal, mas "Plazos Actualizado" con la
+fecha de la ultima corrida. Asi cada causa muestra su plazo en su fila, este o no en el mail
+(el mail lista solo las que estan en zona de aviso; la cartera las muestra todas). Estas
+columnas son de solo lectura para vos: el bot las pisa cada vez. Las que SI cargas vos
+(Fecha Impulso Real, Delito, Pena Max, Fecha Hecho, etc.) se conservan intactas.
+
 ---
 
 ## Solucion de problemas (PJN)

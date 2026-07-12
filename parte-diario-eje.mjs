@@ -31,7 +31,7 @@ import { fileURLToPath } from "node:url";
 import nodemailer from "nodemailer";
 import { buscarCausas, misCausas, listarActuaciones, actuacionesNuevas, parseDia, descargarPdf } from "./lib/eje-client.mjs";
 import { hayCredenciales } from "./lib/eje-auth.mjs";
-import { upsertCausas, leerVigiladas } from "./lib/cartera-eje.mjs";
+import { upsertCausas, leerVigiladas, volcarCalculos } from "./lib/cartera-eje.mjs";
 import { estadoPrevio, registrarActuaciones } from "./lib/movimientos-eje.mjs";
 import { calcularCaducidadEje, renderCaducidadEje } from "./lib/caducidad-eje.mjs";
 import { calcularPrescripcionEje, renderPrescripcionEje } from "./lib/prescripcion-penal-eje.mjs";
@@ -365,11 +365,12 @@ async function main() {
   }
 
   // Caducidad de instancia CAyT (lee cartera-eje.xlsx; independiente de las novedades).
-  let caducidadRender = null;
+  let caducidadRender = null, caducidadTodas = [], prescripcionTodas = [];
   try {
     const cad = await calcularCaducidadEje();
     if (cad.nota) log(`Caducidad EJE: ${cad.nota}`);
     else if (cad.items.length) log(`Caducidad EJE: ${cad.items.length} causa(s) en zona/riesgo; ${cad.sinImpulso || 0} sin impulso verificado`);
+    caducidadTodas = cad.todas || [];
     caducidadRender = renderCaducidadEje(cad);
   } catch (e) { log(`Caducidad EJE omitida: ${e.message}`); }
 
@@ -392,8 +393,17 @@ async function main() {
     const pre = await calcularPrescripcionEje({ fetchActuaciones: fetchActs });
     if (pre.nota) log(`Prescripcion penal: ${pre.nota}`);
     else if (pre.items.length) log(`Prescripcion penal: ${pre.items.length} causa(s) en zona/riesgo; ${pre.sinDatos || 0} sin datos completos`);
+    prescripcionTodas = pre.todas || [];
     prescripcionRender = renderPrescripcionEje(pre);
   } catch (e) { log(`Prescripcion penal omitida: ${e.message}`); }
+
+  // Volcar los plazos calculados (caducidad + prescripcion) a cartera-eje.xlsx, para que
+  // cada causa muestre en su fila el vencimiento, los dias restantes y la alerta.
+  try {
+    const vc = await volcarCalculos({ caducidad: caducidadTodas, prescripcion: prescripcionTodas });
+    if (vc.nota) log(`Plazos en cartera EJE: ${vc.nota}`);
+    else log(`Plazos volcados a cartera-eje: ${vc.escritas} fila(s) con computo.`);
+  } catch (e) { log(`Volcado de plazos EJE omitido: ${e.message}`); }
 
   const parte = armarParte(novedades, desc, vigiladas.length, fallos, caducidadRender, prescripcionRender);
   await enviar(parte, novedades.length, parte.causas, parte.prioritarias, parte.caducidadRevision, parte.prescripcionAlerta, adjuntos);

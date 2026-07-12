@@ -564,12 +564,14 @@ async function main() {
 
   // Alerta de caducidad de instancia (lee cartera-pjn.xlsx).
   let caducidadRender = null;
+  let caducidadTodas = [], prescripcionTodas = [];
   {
     try {
       const { calcularCaducidad, renderCaducidad } = await import("./lib/caducidad.mjs");
       const cad = await calcularCaducidad();
       if (cad.nota) log(`Caducidad: ${cad.nota}`);
       if (cad.items.length) log(`Caducidad: ${cad.items.length} causa(s) en riesgo; ${cad.sinImpulso || 0} sin impulso verificado; ${cad.sinAplicabilidad || 0} sucesion/voluntaria a revisar`);
+      caducidadTodas = cad.todas || [];
       caducidadRender = renderCaducidad(cad.items, cad.sinImpulso || 0, cad.sinAplicabilidad || 0);
     } catch (e) {
       log(`Caducidad omitida: ${e.message}`);
@@ -589,10 +591,23 @@ async function main() {
         if (pen.delito.error) log(`Penal: no se pudo volcar "Delito (art. CP)" (${pen.delito.detectadas} deteccion[es]): ${pen.delito.error}`);
         else if (pen.delito.salida) log(`Penal: "Delito (art. CP)" completado en ${pen.delito.detectadas} fila(s). Archivo: ${pen.delito.salida}`);
       }
+      prescripcionTodas = pen.prescripcionTodas || [];
       penalRender = renderPenal(pen);
     } catch (e) {
       log(`Penal omitido: ${e.message}`);
     }
+  }
+
+  // Volcar los plazos calculados (caducidad + prescripcion) a la cartera, para que cada
+  // causa muestre en su fila el vencimiento, los dias restantes y la alerta. Va despues de
+  // los calculos (y de que penal haya volcado "Delito"), para no pisarse.
+  try {
+    const { volcarCalculos } = await import("./lib/cartera.mjs");
+    const vc = await volcarCalculos({ caducidad: caducidadTodas, prescripcion: prescripcionTodas });
+    if (vc.nota) log(`Plazos en cartera: ${vc.nota}`);
+    else log(`Plazos volcados a la cartera: ${vc.escritas} fila(s) con computo.`);
+  } catch (e) {
+    log(`Volcado de plazos a la cartera omitido: ${e.message}`);
   }
 
   const parte = armarParte(nuevos, desc, fallos, caducidadRender, penalRender);

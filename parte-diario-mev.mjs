@@ -30,7 +30,7 @@ import { fileURLToPath } from "node:url";
 import nodemailer from "nodemailer";
 import { entrarJurisdiccion, causasDeSet, pasosNuevos, parseDia, PAUSA } from "./lib/mev-client.mjs";
 import { hayCredenciales } from "./lib/mev-auth.mjs";
-import { upsertCausas, leerVigiladas } from "./lib/cartera-mev.mjs";
+import { upsertCausas, leerVigiladas, volcarCalculos } from "./lib/cartera-mev.mjs";
 import { estadoPrevio, registrarPasos } from "./lib/movimientos-mev.mjs";
 import { calcularCaducidadMev, renderCaducidadMev } from "./lib/caducidad-mev.mjs";
 import { calcularPrescripcionMev, renderPrescripcionMev } from "./lib/prescripcion-penal-mev.mjs";
@@ -345,11 +345,12 @@ async function main() {
   }
 
   // Caducidad de instancia PBA (lee cartera-mev.xlsx; independiente de las novedades).
-  let caducidadRender = null;
+  let caducidadRender = null, caducidadTodas = [], prescripcionTodas = [];
   try {
     const cad = await calcularCaducidadMev();
     if (cad.nota) log(`Caducidad MEV: ${cad.nota}`);
     else if (cad.items.length) log(`Caducidad MEV: ${cad.items.length} causa(s) en zona/riesgo; ${cad.sinImpulso || 0} sin impulso verificado`);
+    caducidadTodas = cad.todas || [];
     caducidadRender = renderCaducidadMev(cad);
   } catch (e) { log(`Caducidad MEV omitida: ${e.message}`); }
 
@@ -362,8 +363,16 @@ async function main() {
     const pre = await calcularPrescripcionMev();
     if (pre.nota) log(`Prescripcion penal PBA: ${pre.nota}`);
     else if (pre.items.length) log(`Prescripcion penal PBA: ${pre.items.length} causa(s) en zona/riesgo; ${pre.sinDatos || 0} sin datos completos`);
+    prescripcionTodas = pre.todas || [];
     prescripcionRender = renderPrescripcionMev(pre);
   } catch (e) { log(`Prescripcion penal PBA omitida: ${e.message}`); }
+
+  // Volcar los plazos calculados a cartera-mev.xlsx (vencimiento, dias restantes, alerta por fila).
+  try {
+    const vc = await volcarCalculos({ caducidad: caducidadTodas, prescripcion: prescripcionTodas });
+    if (vc.nota) log(`Plazos en cartera MEV: ${vc.nota}`);
+    else log(`Plazos volcados a cartera-mev: ${vc.escritas} fila(s) con computo.`);
+  } catch (e) { log(`Volcado de plazos MEV omitido: ${e.message}`); }
 
   const parte = armarParte(novedades, desc, vigiladas.length, fallos, caducidadRender, prescripcionRender);
   await enviar(parte, novedades.length, parte.causas, parte.prioritarias, parte.caducidadRevision, parte.prescripcionAlerta);
