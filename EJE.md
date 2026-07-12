@@ -7,12 +7,19 @@ CABA usa solo esto; uno con causas en Nacion y Ciudad corre los dos partes.
 
 ## Dos modos: AUTENTICADO (recomendado) y publico
 
-MODO AUTENTICADO (con EJE_USUARIO=CUIT y EJE_CLAVE en .env):
-El Portal del Litigante SI tiene feed de "Mis Causas" (login Keycloak). El bot baja tu
-cartera EXACTA -las causas donde figuras como parte/letrado-, incluidas las RESERVADAS
-(penal/PCyF y sensibles) que la consulta publica oculta. No hay homonimos que depurar.
-Es el modo necesario si tenes causas reservadas: sin login la API publica las rechaza
-(code 1004) y el bot no ve nada.
+MODO AUTENTICADO (con EJE_USUARIO y EJE_CLAVE en .env):
+El Portal del Litigante SI tiene feed de "Mis Causas". El bot baja tu cartera EXACTA
+-las causas donde figuras como parte/letrado-, incluidas las RESERVADAS (penal/PCyF y
+sensibles) que la consulta publica oculta. No hay homonimos que depurar. Es el modo
+necesario si tenes causas reservadas: sin login la API publica las rechaza (code 1004).
+
+El EJE tiene DOS formas de login; elegis con EJE_LOGIN (ver .env.eje.example):
+- EJE_LOGIN=directo -> CUIT/CUIL + clave LOCAL del EJE (Keycloak grant password). Modo
+  ideal para el bot desatendido: sin navegador, una llamada HTTP. EJE_USUARIO = tu CUIT.
+- EJE_LOGIN=miba -> "Ingresar con miBA" (identidad del GCBA). EJE_USUARIO = email/CUIL de
+  miBA. El bot abre un navegador headless y automatiza el login. OJO: si miBA muestra
+  captcha/2FA, la corrida falla (dispara la alerta); para desatendido conviene el directo.
+- sin EJE_LOGIN -> auto: email = miBA; numerico = directo.
 
 MODO PUBLICO (sin credenciales, solo con EJE_CRITERIOS):
 JusCABA publico no expone "mis causas", asi que el bot descubre por nombre (hibrido):

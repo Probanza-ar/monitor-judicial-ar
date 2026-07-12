@@ -30,7 +30,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import nodemailer from "nodemailer";
 import { buscarCausas, misCausas, listarActuaciones, actuacionesNuevas, parseDia, descargarPdf } from "./lib/eje-client.mjs";
-import { hayCredenciales } from "./lib/eje-auth.mjs";
+import { hayCredenciales, cerrarNavegador } from "./lib/eje-auth.mjs";
 import { upsertCausas, leerVigiladas, volcarCalculos } from "./lib/cartera-eje.mjs";
 import { estadoPrevio, registrarActuaciones } from "./lib/movimientos-eje.mjs";
 import { calcularCaducidadEje, renderCaducidadEje } from "./lib/caducidad-eje.mjs";
@@ -414,8 +414,9 @@ async function main() {
   registrarCorrida(`${novedades.length} novedades, ${parte.prioritarias} prioritarias, ${fallos.length} errores`);
 }
 
-main().then(() => process.exit(0)).catch(async (e) => {
+main().then(async () => { await cerrarNavegador(); process.exit(0); }).catch(async (e) => {
   console.error("ERROR:", e.message);
   await enviarAlertaFalla(e);
+  await cerrarNavegador();
   process.exit(1);
 });

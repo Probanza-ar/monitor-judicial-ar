@@ -42,6 +42,9 @@ diag-prescripcion.mjs
 # Perfil del navegador: guarda la sesion del PJN. NO subir.
 .pjn-profile/
 
+# Perfil del navegador del EJE (modo miBA): guarda la sesion. NO subir.
+.eje-profile/
+
 # Salidas (PDF y logs)
 pdfs/
 pdfs-eje/
