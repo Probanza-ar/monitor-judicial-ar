@@ -41,6 +41,13 @@ extendido por el período de suspensión cargado.
 - "Último Acto Interruptivo": fecha del último acto del art. 67 (indagatoria,
   requerimiento, citación a juicio, condena). Si está, manda sobre la fecha del hecho.
 - "Susp Desde" / "Susp Hasta": período de suspensión a descontar.
+- "Delito (art. CP)": el bot la completa SOLO (no pisa una carga manual ni de una
+  corrida anterior) con el artículo que detectó en la carátula, y el párrafo si lo pudo
+  identificar (ej. "119 (3er parrafo)"). Sirve para auditar qué interpretó el sistema en
+  cada corrida y corregirlo a mano pisando la celda si hace falta. Para el art. 119, cuyas
+  escalas cambian mucho por párrafo (1° 6m-4a, 2° 4-10a, 3° 6-15a, último hasta 20a), si el
+  párrafo no queda identificado el sistema NO asume el 1° (más liviano): deja la causa sin
+  plazo de tabla y la marca en el parte para revisión manual, en vez de calcular de menos.
 
 ## Límites (importante)
 
@@ -79,9 +86,25 @@ concesión suspende la prescripción durante el período de prueba (art. 76 ter 
 
 - PENAL_INACTIVIDAD_DIAS: umbral de inactividad en días (default 120).
 - PENAL_AVISO_DIAS: anticipación del aviso de prescripción (default 90).
+- PENAL_DELITO_INPLACE: fuerza (true/false) si el volcado de "Delito (art. CP)" se
+  escribe sobre el mismo archivo o sobre una copia "*.actualizado.xlsx". Default: true
+  si se está leyendo cartera-pjn.xlsx (archivo plano del bot, sin dashboards); false si
+  se cayó al fallback EXCEL_PATH (Excel de gestión con formato/gráficos, mismo criterio
+  de cautela que excel-writeback.mjs).
+
+## Sin dato de pena (art. detectado sin entrada en tabla)
+
+Si el bot detecta un artículo del CP en la carátula pero no tiene entrada en la tabla
+interna (TABLA_PENAS, en penal-base.mjs) -o el art. 119 sin párrafo identificado-, la
+causa NO se computa y aparece en un bloque aparte del parte ("SIN DATO DE PENA") en vez
+de desaparecer sin aviso. Se resuelve cargando "Pena Max Anios" o "Prescripcion Anios" a
+mano, o precisando el párrafo en "Delito (art. CP)" (ej. agregar "3er parrafo").
 
 ## Estado
 
-Construido sobre base normativa verificada. No se pudo probar en ejecución en este
-entorno; validar en la primera corrida con EXCEL_PATH. El monitor de inactividad
-funciona sin datos extra; la prescripción se enciende al cargar las columnas.
+Base normativa verificada; sintaxis validada con node --check en los módulos tocados
+(penal-base.mjs, penal.mjs, cartera.mjs) y con un test funcional de las funciones puras
+(articuloDe/parrafoDe/buscarPena, plazoCaducidadMeses). Falta la corrida real contra un
+Excel con datos: validar en la primera corrida con EXCEL_PATH o CARTERA_XLSX. El monitor
+de inactividad funciona sin datos extra; la prescripción se enciende al cargar las
+columnas.
