@@ -134,7 +134,7 @@ CUIT), incluidas las causas reservadas que la consulta publica no muestra.
    `EJE_USUARIO` (tu CUIT) y `EJE_CLAVE` (tu clave del EJE).
 2. Sembrá tu cartera: `node descubrir-eje.mjs` (trae "Mis Causas", sin homonimos).
 3. Probá el parte: `node parte-diario-eje.mjs`.
-4. Agendá `run-parte-eje.bat` en el Programador de tareas (ej. 08:00 y 18:00).
+4. Agendá el disparo diario con `agendar.bat` (ver "Agendar los partes", mas abajo).
 
 Detalle del frente y de los computos de plazos: ver `EJE.md`.
 
@@ -151,20 +151,43 @@ vencio) y parsea el HTML del portal.
 
 1. Copiá las variables de `.env.mev.example` al final de tu `.env` y completá:
    `MEV_USUARIO`, `MEV_CLAVE`, `MEV_DEPTO_REGISTRADO` (el "Creado en" del login; `aa` =
-   Todos los Deptos) y `MEV_JURISDICCIONES` (lista separada por `;` de
-   `Depto[:penal][:familia]`; el fuero penal/familia se pasa como flag porque las causas
-   reservadas solo se ven entrando con ese fuero).
-2. Sembrá tu cartera: `node descubrir-mev.mjs` (recorre los sets de cada jurisdiccion
-   configurada, incluida la "Lista de Causas con Autorizacion"). Depurá homonimos con la
-   columna "Vigilar", igual que en el EJE.
+   Todos los Deptos) y `MEV_JURISDICCIONES`. Esta ultima admite dos formas:
+   - `auto` (o vacio): el descubridor barre los 23 departamentos por fuero (civil/familia/
+     penal) y encuentra tus causas autorizadas sin que sepas donde tramitan. Ideal la
+     primera vez. El parte diario con `auto` NO re-barre: usa la cartera ya sembrada.
+   - `Depto[:penal][:familia]` separados por `;` (ej. `San Martin:penal;La Plata`): solo
+     esas jurisdicciones; mas liviano para el parte diario, que las re-siembra cada corrida.
+2. Sembrá tu cartera: `node descubrir-mev.mjs` (recorre los sets de cada jurisdiccion,
+   incluida la "Lista de Causas con Autorizacion"). Al final, en modo `auto`, lista en que
+   jurisdicciones aparecieron causas. Depurá homonimos con la columna "Vigilar".
 3. Para que la caducidad de instancia pase de estimada a exacta, cargá "Fecha Impulso
    Real" en las causas civiles/comerciales.
-4. Para que la prescripcion penal pase de estimada a computo, cargá "Delito (art. CP)",
-   "Fecha Hecho", "Pena Max (anios)" y "Ultima Interrupcion" en las causas penales.
+4. En las causas penales, el bot deduce el delito y la pena de la caratula y los auto-
+   completa en la cartera (columnas "Delito (art. CP)" y "Pena Max (anios)", con marca
+   `[auto]`; confirmalos o pisalos). Para afinar la prescripcion, cargá ademas "Fecha
+   Hecho" y "Ultima Interrupcion", que no surgen del portal.
 5. Probá el parte: `node parte-diario-mev.mjs`.
-6. Agendá `run-parte-mev.bat` en el Programador de tareas (ej. 08:00 y 18:00).
+6. Agendá el disparo diario con `agendar.bat` (ver "Agendar los partes", mas abajo).
 
 Detalle del frente y de los computos de plazos: ver `MEV.md`.
+
+---
+
+## Agendar los partes (PJN / EJE / MEV)
+
+Para que los partes salgan solos cada dia, doble clic en `agendar.bat` (Mac/Linux:
+`node agendar.mjs`). Es un asistente que te deja elegir:
+
+- **Que frentes** programar (PJN, EJE, MEV, o los tres).
+- **Con que frecuencia**: una vez al dia, dos veces (manana y tarde), o los horarios que
+  vos pongas.
+- **A que hora**.
+
+Crea las tareas en el Programador de tareas de Windows (o en cron) apuntando a cada
+`run-parte-*.bat`. El Excel guarda las causas y los plazos, pero no dispara nada: el disparo
+diario lo hace el sistema operativo, y eso es lo que este asistente configura. Para verlas o
+borrarlas: en Windows, "Programador de tareas" (o `schtasks /Query /TN ParteDiarioMEV`); en
+Mac/Linux, `crontab -l`.
 
 ---
 
@@ -186,8 +209,13 @@ completa y actualiza en cada corrida (no las cargas vos): "Caduc. Vence", "Caduc
 "Prescr. Dias", "Prescr. Alerta" para la prescripcion penal, mas "Plazos Actualizado" con la
 fecha de la ultima corrida. Asi cada causa muestra su plazo en su fila, este o no en el mail
 (el mail lista solo las que estan en zona de aviso; la cartera las muestra todas). Estas
-columnas son de solo lectura para vos: el bot las pisa cada vez. Las que SI cargas vos
-(Fecha Impulso Real, Delito, Pena Max, Fecha Hecho, etc.) se conservan intactas.
+columnas son de solo lectura para vos: el bot las pisa cada vez.
+
+En las causas penales, el bot ademas auto-completa "Delito (art. CP)" y "Pena Max" con lo que
+deduce de la caratula (con marca `[auto]`), pero SOLO si la celda esta vacia: si vos las
+cargaste, las respeta. Igual con "Fecha Impulso Real", "Fecha Hecho" y "Ultima Interrupcion":
+lo que cargas vos nunca se pisa, y tiene prioridad sobre lo que deduce el bot. El `[auto]` te
+avisa que ese dato lo puso el sistema para que lo confirmes.
 
 ---
 
