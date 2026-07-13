@@ -107,14 +107,26 @@ una CALCULADORA ASISTIDA (lib/prescripcion-penal-mev.mjs, nucleo penal-base.mjs)
 ## Estado / pendientes (lado del usuario)
 
 1. Pegar las variables MEV_* al .env con credenciales reales.
-2. Correr `node descubrir-mev.mjs` para sembrar cartera-mev.xlsx; depurar con "Vigilar".
+2. Sembrar la cartera con `node descubrir-mev.mjs` y depurar con "Vigilar":
+   - MEV_JURISDICCIONES=auto (o vacio) -> MODO AUTO: barre los 23 deptos x fuero
+     (civil/familia/penal), consulta el set de autorizadas en cada uno y siembra todo.
+     Al final lista en que jurisdicciones aparecieron causas. Util si no sabes donde
+     tramitan. El parte diario con "auto" NO re-siembra: usa la cartera ya cargada
+     (correr descubrir-mev.mjs cada vez que pidas una autorizacion nueva).
+   - MEV_JURISDICCIONES=Depto:penal;Depto2 -> solo esas jurisdicciones (mas liviano):
+     el parte las re-siembra en cada corrida y descubre causas nuevas ahi.
+   Nota: el "(NNN)" que muestra el set "Lista de Causas con AUTORIZACION" es un numero
+   interno del portal, NO tu cantidad de causas.
 3. Cargar "Fecha Impulso Real" en las causas civiles/comerciales para que la
    caducidad pase de estimada a exacta.
 4. Para las causas penales: cargar "Delito (art. CP)", "Fecha Hecho", "Pena Max
    (anios)" y "Ultima Interrupcion" para que la prescripcion pase de estimada a computo.
 5. feria-pba.json 2026; actualizar cada anio con el nuevo Acuerdo SCBA
    (enero suele ser 1-31; la feria de invierno cambia de fechas).
-6. Sumar la tarea programada (08/18 hs) apuntando a run-parte-mev.bat.
+6. Programar el disparo diario con `agendar.bat` (o `node agendar.mjs`): elegis que
+   frentes (PJN/EJE/MEV), frecuencia (1 o 2 veces al dia, o horarios a medida) y hora.
+   Crea las tareas en el Programador de Windows (schtasks) o en cron. El Excel guarda
+   causas y plazos, pero NO dispara nada: el disparo lo hace el sistema operativo.
 
 ## Marcadores de integridad
 
